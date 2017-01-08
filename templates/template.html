@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script
+    src="https://code.jquery.com/jquery-3.1.1.min.js"
+    crossorigin="anonymous"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/js/vex.combined.min.js"></script>
+    <script>vex.defaultOptions.className = 'vex-theme-os'</script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vex-js/3.0.0/css/vex-theme-os.css" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gadmin</title>
+  </head>
+  <body>
+    <nav class="navbar navbar-default">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <a class="navbar-brand">Manager</a>
+        </div>
+        <ul class="nav navbar-nav">
+          {{range .Pages}}
+          <li class="{{if eq $.PageName .}}active{{end}}"><a href="/admin/manager/{{.}}">{{.}}</a></li>
+          {{end}}
+        </ul>
+      </div>
+    </nav>
+    <div class="table-responsive">
+      <table class="table table-hover table-striped">
+        <tr>
+          {{range .Fields}}
+            {{if (in $.Filter .)}}
+            {{else}}
+              <th>{{.}}</th>
+            {{end}}
+          {{end}}
+		      <th>Edit</th>
+          <th>Delete</th>
+        </tr>
+        {{$fields := .Fields}}
+        {{range $index, $map := .Context}}
+	        {{if (index $map "DeletedAt" | deletedFilter)}}
+	        {{else}}
+            <tr>
+              {{range $index, $key := $fields}}
+                {{if (in $.Filter $key)}}
+                {{else}}
+                  <td>{{index $map $key | format}}</td>
+                {{end}}
+              {{end}}
+	            <td><button type="button" name="button" onclick="edit({{$.PageName}}, {{$map}})">Edit</button></td>
+              <td><button type="button" name="button" onclick="del({{$.PageName}}, {{$map}})">Delete</button></td>
+            </tr>
+	        {{end}}
+        {{end}}
+      </table>
+    </div>
+    <script type="text/javascript">
+      function del(key, data) {
+        $.ajax({
+          url: "/admin/manager/" + key + "/delete/" + data["ID"],
+          type: "DELETE",
+          success: function (s) {
+            location.reload();
+          },
+        })
+      }
+      function sendEdit(data, key, id) {
+        $.ajax({
+          url: "/admin/manager/" + key + "/edit/" + id,
+          type: "POST",
+          data: data,
+          success: function (s) {
+            location.reload();
+          },
+        })
+      }
+      function createInput(key, map) {
+        const label = '<label>Key: ' + key + ', Old Value: ' + map[key] + '</label>'
+        const input = '<input name="' + key + '" type="text" placeholder="' + key + '"/>'
+        return label + input
+      }
+      function edit(key, map) {
+        var inputArray = []
+        for (var keyMap in map) {
+          inputArray.push(createInput(keyMap, map))
+        }
+        console.log(inputArray);
+        vex.dialog.open({
+          message: 'Enter your username and password:',
+          input: inputArray.join(''),
+          buttons: [
+            $.extend({}, vex.dialog.buttons.YES, { text: 'Edit' }),
+            $.extend({}, vex.dialog.buttons.NO, { text: 'Back' })
+          ],
+          callback: function (data) {
+            if (!data) {
+              console.log('Cancelled')
+            } else {
+              if (Object.keys(data).length >= 1) {
+                sendEdit(data, key, map["ID"])
+              }
+            }
+          }
+        })
+      }
+    </script>
+  </body>
+</html>
